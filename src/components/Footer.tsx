@@ -23,7 +23,10 @@ const Footer: React.FC = () => {
             <a href={"https://github.com/naiba/nezha"} target="_blank">
               Nezha
             </a>
-            <p>{settingData?.data?.version || ""}</p>
+            <span className="flex items-center border-l border-gray-300 w-1 h-3"></span>
+            <p>Powered by Komari {settingData?.data?.version || ""}</p>
+            <span className="flex items-center border-l border-gray-300 w-1 h-3"></span>
+            <p>Modified by Akizon77</p>
           </div>
           <div className="server-footer-theme flex flex-col items-center sm:items-end">
             <p className="mt-1 text-[13px] font-light tracking-tight text-neutral-600/50 dark:text-neutral-300/50">

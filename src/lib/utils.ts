@@ -1,4 +1,5 @@
-import { NezhaServer } from "@/types/nezha-api"
+import { SharedClient } from "@/hooks/use-rpc2"
+import { NezhaServer, NezhaWebsocketResponse } from "@/types/nezha-api"
 import { type ClassValue, clsx } from "clsx"
 import dayjs from "dayjs"
 import { twMerge } from "tailwind-merge"
@@ -319,4 +320,213 @@ export function handlePublicNote(serverId: number, publicNote: string): string {
   }
 
   return ""
+}
+
+export const uuidToNumber = (uuid: string): number => {
+  let hash = 0
+  for (let i = 0; i < uuid.length; i++) {
+    const charCode = uuid.charCodeAt(i)
+    hash = charCode + ((hash << 5) - hash)
+  }
+  return hash >>> 0
+}
+
+let km_servers_cache: any[] = []
+
+const countryFlagToCode = (flag: string): string => {
+  return [...flag].map((c) => String.fromCharCode(c.codePointAt(0)! - 127397 + 32)).join("")
+}
+
+export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketResponse => {
+  if (km_servers_cache.length === 0) {
+    SharedClient()
+      .call("common:getNodes")
+      .then((res) => {
+        km_servers_cache = Object.values(res || {})
+      })
+  }
+
+  // 如果还没有缓存，先按 data 渲染，避免首次为空
+  if (!km_servers_cache || km_servers_cache.length === 0) {
+    const servers: any[] = Object.entries(data || {}).reduce((acc: any[], [uuid, status]: [string, any]) => {
+      const host = {
+        platform: status.os || "",
+        platform_version: status.kernel_version || "",
+        cpu: status.cpu_name ? [status.cpu_name] : [],
+        gpu: status.gpu_name ? [status.gpu_name] : [],
+        mem_total: status.ram_total || 0,
+        disk_total: status.disk_total || 0,
+        swap_total: status.swap_total || 0,
+        arch: status.arch || "",
+        boot_time: new Date(status.time).getTime() / 1000 - (status.uptime || 0),
+        version: "",
+      }
+
+      const state = {
+        cpu: status.cpu || 0,
+        mem_used: status.ram || 0,
+        swap_used: status.swap || 0,
+        disk_used: status.disk || 0,
+        net_in_transfer: status.net_total_down || 0,
+        net_out_transfer: status.net_total_up || 0,
+        net_in_speed: status.net_in || 0,
+        net_out_speed: status.net_out || 0,
+        uptime: status.uptime || 0,
+        load_1: status.load || 0,
+        load_5: status.load5 || 0,
+        load_15: status.load15 || 0,
+        tcp_conn_count: status.connections || 0,
+        udp_conn_count: status.connections_udp || 0,
+        process_count: status.process || 0,
+        temperatures: status.temp > 0 ? [{ Name: "CPU", Temperature: status.temp }] : [],
+        gpu: typeof status.gpu === "number" ? [status.gpu] : [],
+      }
+
+      acc.push({
+        id: uuidToNumber(uuid),
+        name: status.name || uuid,
+        public_note: "",
+        last_active: status.time,
+        country_code: status.region ? countryFlagToCode(status.region) : "",
+        display_index: 0,
+        host,
+        state,
+      })
+      return acc
+    }, [])
+
+    return {
+      now: Date.now(),
+      servers,
+    }
+  }
+
+  // 按缓存列表展示；如果 data 中没有该 uuid，则视为离线
+  const statusMap = new Map<string, any>(Object.entries(data || {}))
+  const servers: any[] = km_servers_cache.map((server: any) => {
+    const uuid = server.uuid
+    const status = statusMap.get(uuid)
+    // 已处理的 uuid 从映射中移除，避免后续增补阶段重复添加
+    if (statusMap.has(uuid)) {
+      statusMap.delete(uuid)
+    }
+
+    const bootTime = status ? new Date(status.time).getTime() / 1000 - (status.uptime || 0) : 0
+
+    const host = {
+      platform: server.os,
+      platform_version: server.kernel_version,
+      cpu: [server.cpu_name],
+      gpu: server.gpu_name ? [server.gpu_name] : [],
+      mem_total: server.mem_total,
+      disk_total: server.disk_total,
+      swap_total: server.swap_total,
+      arch: server.arch,
+      boot_time: bootTime,
+      version: "",
+    }
+
+    const state = status
+      ? {
+          cpu: status.cpu || 0,
+          mem_used: status.ram || 0,
+          swap_used: status.swap || 0,
+          disk_used: status.disk || 0,
+          net_in_transfer: status.net_total_down || 0,
+          net_out_transfer: status.net_total_up || 0,
+          net_in_speed: status.net_in || 0,
+          net_out_speed: status.net_out || 0,
+          uptime: status.uptime || 0,
+          load_1: status.load || 0,
+          load_5: status.load5 || 0,
+          load_15: status.load15 || 0,
+          tcp_conn_count: status.connections || 0,
+          udp_conn_count: status.connections_udp || 0,
+          process_count: status.process || 0,
+          temperatures: status.temp > 0 ? [{ Name: "CPU", Temperature: status.temp }] : [],
+          gpu: server.gpu_name && typeof status.gpu === "number" ? [status.gpu] : [],
+        }
+      : {
+          cpu: 0,
+          mem_used: 0,
+          swap_used: 0,
+          disk_used: 0,
+          net_in_transfer: 0,
+          net_out_transfer: 0,
+          net_in_speed: 0,
+          net_out_speed: 0,
+          uptime: 0,
+          load_1: 0,
+          load_5: 0,
+          load_15: 0,
+          tcp_conn_count: 0,
+          udp_conn_count: 0,
+          process_count: 0,
+          temperatures: [],
+          gpu: [],
+        }
+
+    return {
+      id: uuidToNumber(uuid),
+      name: server.name,
+      public_note: server.public_note || "",
+      last_active: status ? status.time : "0000-00-00T00:00:00Z",
+      country_code: countryFlagToCode(server.region),
+      display_index: -server.weight || 0,
+      host,
+      state,
+    }
+  })
+
+  // 追加那些仅在 data 里出现但缓存里没有的新服务器（保证“出现过的都显示”）
+  for (const [uuid, status] of statusMap.entries()) {
+    const host = {
+      platform: status.os || "",
+      platform_version: status.kernel_version || "",
+      cpu: status.cpu_name ? [status.cpu_name] : [],
+      gpu: status.gpu_name ? [status.gpu_name] : [],
+      mem_total: status.ram_total || 0,
+      disk_total: status.disk_total || 0,
+      swap_total: status.swap_total || 0,
+      arch: status.arch || "",
+      boot_time: new Date(status.time).getTime() / 1000 - (status.uptime || 0),
+      version: "",
+    }
+
+    const state = {
+      cpu: status.cpu || 0,
+      mem_used: status.ram || 0,
+      swap_used: status.swap || 0,
+      disk_used: status.disk || 0,
+      net_in_transfer: status.net_total_down || 0,
+      net_out_transfer: status.net_total_up || 0,
+      net_in_speed: status.net_in || 0,
+      net_out_speed: status.net_out || 0,
+      uptime: status.uptime || 0,
+      load_1: status.load || 0,
+      load_5: status.load5 || 0,
+      load_15: status.load15 || 0,
+      tcp_conn_count: status.connections || 0,
+      udp_conn_count: status.connections_udp || 0,
+      process_count: status.process || 0,
+      temperatures: status.temp > 0 ? [{ Name: "CPU", Temperature: status.temp }] : [],
+      gpu: typeof status.gpu === "number" ? [status.gpu] : [],
+    }
+
+    servers.push({
+      id: uuidToNumber(uuid),
+      name: status.name || uuid,
+      public_note: "",
+      last_active: status.time,
+      country_code: status.region ? countryFlagToCode(status.region) : "",
+      display_index: 0,
+      host,
+      state,
+    })
+  }
+
+  return {
+    now: Date.now(),
+    servers,
+  }
 }

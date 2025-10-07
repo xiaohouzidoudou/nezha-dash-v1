@@ -116,7 +116,7 @@ export default function Servers() {
       <div className="flex flex-col items-center min-h-96 justify-center ">
         <div className="font-semibold flex items-center gap-2 text-sm">
           <Loader visible={true} />
-          {t("info.websocketConnecting")}
+          {/* {t("info.websocketConnecting")} */}
         </div>
       </div>
     )
@@ -218,7 +218,7 @@ export default function Servers() {
         comparison = (a.state?.net_in_transfer ?? 0) - (b.state?.net_in_transfer ?? 0)
         break
       default:
-        comparison = 0
+        comparison = (a.display_index ?? 0) - (b.display_index ?? 0)
     }
 
     return sortOrder === "asc" ? comparison : -comparison

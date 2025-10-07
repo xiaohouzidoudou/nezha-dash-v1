@@ -11,6 +11,7 @@ export interface NezhaServer {
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus
+  display_index?: number
 }
 
 export interface NezhaServerHost {

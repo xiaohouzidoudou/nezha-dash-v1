@@ -3,19 +3,19 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBackground } from "@/hooks/use-background"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
-import { fetchLoginUser, fetchSetting } from "@/lib/nezha-api"
+import { fetchSetting } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import NumberFlow, { NumberFlowGroup } from "@number-flow/react"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
-import { ImageMinus } from "lucide-react"
+import { ImageMinus, LogIn } from "lucide-react"
 import { DateTime } from "luxon"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
 import { LanguageSwitcher } from "./LanguageSwitcher"
-import { Loader, LoadingSpinner } from "./loading/Loader"
+import { LoadingSpinner } from "./loading/Loader"
 import { Button } from "./ui/button"
 
 function Header() {
@@ -30,17 +30,17 @@ function Header() {
     refetchOnWindowFocus: true,
   })
 
-  const { lastMessage, connected } = useWebSocketContext()
+  //const { lastMessage, connected } = useWebSocketContext()
 
-  const onlineCount = connected ? (lastMessage ? JSON.parse(lastMessage.data).online || 0 : 0) : "..."
+  //const onlineCount = connected ? (lastMessage ? JSON.parse(lastMessage.data).online || 0 : 0) : "..."
 
   const siteName = settingData?.data?.config?.site_name
 
   // @ts-expect-error CustomLogo is a global variable
-  const customLogo = window.CustomLogo || "/apple-touch-icon.png"
+  const customLogo = window.CustomLogo || "/favicon.ico"
 
   // @ts-expect-error CustomDesc is a global variable
-  const customDesc = window.CustomDesc || t("nezha")
+  const customDesc = window.CustomDesc || "Komari Monitor"
 
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage !== "" ? window.CustomMobileBackgroundImage : undefined
 
@@ -118,21 +118,25 @@ function Header() {
               <ImageMinus className="w-4 h-4" />
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn("hover:bg-white dark:hover:bg-black cursor-default rounded-full flex items-center px-[9px] bg-white dark:bg-black", {
-              "bg-white/70 dark:bg-black/70": customBackgroundImage,
-            })}
-          >
-            {connected ? onlineCount : <Loader visible={true} />}
-            <p className="text-muted-foreground">{connected ? t("online") : t("offline")}</p>
-            <span
+          <a href="/admin" target="_blank">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("rounded-full px-[9px] bg-white dark:bg-black", {
+                "bg-white/70 dark:bg-black/70": customBackgroundImage,
+              })}
+              title={t("login")}
+            >
+              {/* {connected ? onlineCount : <Loader visible={true} />} */}
+              {/* <p className="text-muted-foreground">{connected ? t("online") : t("offline")}</p> */}
+              {/* <span
               className={cn("h-2 w-2 rounded-full bg-green-500", {
                 "bg-red-500": !connected,
               })}
-            ></span>
-          </Button>
+            ></span> */}
+              <LogIn />
+            </Button>
+          </a>
         </section>
       </section>
       <div className="w-full flex justify-between sm:hidden mt-1">
@@ -212,56 +216,58 @@ export function RefreshToast() {
 }
 
 function DashboardLink() {
-  const { t } = useTranslation()
-  const { setNeedReconnect } = useWebSocketContext()
-  const previousLoginState = useRef<boolean | null>(null)
-  const {
-    data: userData,
-    isFetched,
-    isLoadingError,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["login-user"],
-    queryFn: () => fetchLoginUser(),
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
-    refetchIntervalInBackground: true,
-    refetchInterval: 1000 * 30,
-    retry: 0,
-  })
+  // 登录交给Komari后台处理
+  // const { t } = useTranslation()
+  // const { setNeedReconnect } = useWebSocketContext()
+  // const previousLoginState = useRef<boolean | null>(null)
+  // const {
+  //   data: userData,
+  //   isFetched,
+  //   isLoadingError,
+  //   isError,
+  //   refetch,
+  // } = useQuery({
+  //   queryKey: ["login-user"],
+  //   queryFn: () => fetchLoginUser(),
+  //   refetchOnMount: false,
+  //   refetchOnWindowFocus: true,
+  //   refetchIntervalInBackground: true,
+  //   refetchInterval: 1000 * 30,
+  //   retry: 0,
+  // })
 
-  const isLogin = isError ? false : userData ? !!userData?.data?.id && !!document.cookie : false
+  // const isLogin = isError ? false : userData ? !!userData?.data?.id && !!document.cookie : false
 
-  if (isLoadingError) {
-    previousLoginState.current = isLogin
-  }
+  // if (isLoadingError) {
+  //   previousLoginState.current = isLogin
+  // }
 
-  useEffect(() => {
-    refetch()
-  }, [document.cookie])
+  // useEffect(() => {
+  //   refetch()
+  // }, [document.cookie])
 
-  useEffect(() => {
-    if (isFetched || isError) {
-      // 只有当登录状态发生变化时才设置needReconnect
-      if (previousLoginState.current !== null && previousLoginState.current !== isLogin) {
-        setNeedReconnect(true)
-      }
-      previousLoginState.current = isLogin
-    }
-  }, [isLogin])
+  // useEffect(() => {
+  //   if (isFetched || isError) {
+  //     // 只有当登录状态发生变化时才设置needReconnect
+  //     if (previousLoginState.current !== null && previousLoginState.current !== isLogin) {
+  //       setNeedReconnect(true)
+  //     }
+  //     previousLoginState.current = isLogin
+  //   }
+  // }, [isLogin])
 
   return (
-    <div className="flex items-center gap-2">
-      <a
-        href={"/dashboard"}
-        rel="noopener noreferrer"
-        className="flex items-center text-nowrap gap-1 text-sm font-medium opacity-50 transition-opacity hover:opacity-100"
-      >
-        {!isLogin && t("login")}
-        {isLogin && t("dashboard")}
-      </a>
-    </div>
+    <></>
+    // <div className="flex items-center gap-2">
+    //   <a
+    //     href={"/dashboard"}
+    //     rel="noopener noreferrer"
+    //     className="flex items-center text-nowrap gap-1 text-sm font-medium opacity-50 transition-opacity hover:opacity-100"
+    //   >
+    //     {!isLogin && t("login")}
+    //     {isLogin && t("dashboard")}
+    //   </a>
+    // </div>
   )
 }
 
