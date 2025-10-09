@@ -430,13 +430,13 @@ function buildPublicNoteFromNode(server: any, existingPublicNote?: string): stri
           : ""
 
     const merged = {
-      billingDataMod: {
+      billingDataMod: endDate ? {
         startDate: existing?.billingDataMod?.startDate || startDate,
         endDate: existing?.billingDataMod?.endDate || endDate,
         autoRenewal: existing?.billingDataMod?.autoRenewal || autoRenewal,
         cycle: existing?.billingDataMod?.cycle || cycle === "-1" ? "" : cycle,
         amount: existing?.billingDataMod?.amount || amount,
-      },
+      }:null,
       planDataMod: {
         bandwidth: existing?.planDataMod?.bandwidth || "",
         // 当 traffic_limit==0 时，不从节点写入流量信息
@@ -446,7 +446,7 @@ function buildPublicNoteFromNode(server: any, existingPublicNote?: string): stri
         IPv6: existing?.planDataMod?.IPv6 || (server?.ipv6 ? "1" : ""),
         networkRoute: existing?.planDataMod?.networkRoute || "",
         // 若存在 public_remark，优先写入 extra；否则保留已有或使用 tags
-        extra: extraFromNode || existing?.planDataMod?.extra || "",
+        extra: existing?.planDataMod?.extra || extraFromNode || "",
       },
     }
 
