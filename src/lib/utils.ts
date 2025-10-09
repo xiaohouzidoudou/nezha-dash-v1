@@ -400,7 +400,7 @@ function buildPublicNoteFromNode(server: any, existingPublicNote?: string): stri
     const amount: string =
       server?.price != null && server?.price !== 0
         ? server?.currency
-          ? `${server.price == -1 ? "" :server.currency}${server.price == -1 ? "免费" : server.price}`
+          ? `${server.price == -1 ? "" :server.currency}${server.price == -1 ? "0" : server.price}`
           : String(server.price)
         : ""
 
