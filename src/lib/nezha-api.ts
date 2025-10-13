@@ -136,6 +136,15 @@ export const fetchMonitor = async (server_id: number): Promise<MonitorResponse> 
     return { ...s, created_at: zip.map((z) => z.t), avg_delay: zip.map((z) => z.v) }
   })
 
+  // 避免空的 avg_delay
+  for (const s of data) {
+    if (s.avg_delay.length == 0) {
+      s.packet_loss = seriesByTask.get(s.monitor_id)?.packet_loss || [0]
+      s.avg_delay = [-1]
+      s.created_at = [Date.now()]
+    }
+  }
+
   return { success: true, data }
 }
 // TODO
